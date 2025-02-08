@@ -7,9 +7,22 @@ from aiogram.client.default import DefaultBotProperties
 import asyncio
 import os
 import datetime
+from dotenv import load_dotenv
+from aiogram.enums import ParseMode
+from aiogram.enums import ParseMode
+from aiogram import Bot
 
 # Load Firebase credentials từ biến môi trường
-firebase_key = json.loads(os.getenv("FIREBASE_KEY"))
+load_dotenv()
+firebase_key_raw = os.getenv("FIREBASE_KEY")
+print("🔥 Giá trị FIREBASE_KEY từ .env:", repr(firebase_key_raw))
+
+try:
+    firebase_key = json.loads(firebase_key_raw)
+    print("✅ JSON ĐÃ PARSE:", firebase_key)
+except json.JSONDecodeError as e:
+    print("❌ Lỗi JSON:", e)
+
 cred = credentials.Certificate(firebase_key)
 firebase_admin.initialize_app(cred, {
     'databaseURL': 'https://moneybot-fa25a-default-rtdb.asia-southeast1.firebasedatabase.app/'  # Thay bằng URL Firebase của Quan
@@ -17,8 +30,14 @@ firebase_admin.initialize_app(cred, {
 
 # Telegram Bot
 BOT_TOKEN = os.getenv("BOT_TOKEN")
-bot = Bot(token=BOT_TOKEN, default=DefaultBotProperties(parse_mode=types.ParseMode.HTML))
+bot = Bot(
+    token=BOT_TOKEN,
+    default=DefaultBotProperties(parse_mode=ParseMode.HTML)
+)
 dp = Dispatcher()
+
+
+
 
 # Lưu lịch tập gym vào Firebase
 async def save_gym_schedule(user_id, schedule_text):
