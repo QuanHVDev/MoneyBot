@@ -6,9 +6,11 @@ from aiogram.types import Message
 from aiogram.enums import ParseMode
 import asyncio
 import os
+import datetime
 
 # Load Firebase credentials
-cred = credentials.Certificate("firebase_key.json")  # Đổi tên nếu cần
+firebase_key = json.loads(os.getenv("FIREBASE_KEY"))
+cred = credentials.Certificate(firebase_key)
 firebase_admin.initialize_app(cred, {
     'databaseURL': 'https://your-database.firebaseio.com/'  # Thay bằng URL Firebase của Quan
 })
@@ -18,52 +20,55 @@ BOT_TOKEN = os.getenv("BOT_TOKEN")
 bot = Bot(token=BOT_TOKEN, parse_mode=ParseMode.HTML)
 dp = Dispatcher()
 
-# Lưu dữ liệu thu chi vào Firebase
-async def save_transaction(user_id, category, amount):
-    ref = db.reference(f"users/{user_id}/transactions")
-    new_entry = ref.push()
-    new_entry.set({
-        "category": category,
-        "amount": amount
-    })
+# Lưu lịch tập gym vào Firebase
+async def save_gym_schedule(user_id, schedule_text):
+    ref = db.reference(f"users/{user_id}/gym_schedule")
+    schedule_dict = {}
 
-@dp.message(commands=['start'])
-async def start(message: Message):
-    user_id = str(message.from_user.id)  # Lấy ID Telegram của user
-    await message.answer(f"Xin chào {message.from_user.first_name}! Hãy nhập thu chi của bạn.")
+    for line in schedule_text.split("\n"):
+        parts = line.split("/")
+        if len(parts) == 2:
+            day, workout = parts[0].strip().lower(), parts[1].strip()
+            schedule_dict[day] = workout
 
-@dp.message(commands=['add'])
-async def add_transaction(message: Message):
-    try:
-        user_id = str(message.from_user.id)
-        args = message.text.split()
-        if len(args) < 3:
-            await message.answer("Vui lòng nhập đúng định dạng: /add <loại> <số tiền>")
-            return
+    ref.set(schedule_dict)
 
-        category = args[1]
-        amount = float(args[2])
-        await save_transaction(user_id, category, amount)
-        await message.answer(f"Đã lưu: {category} - {amount} VND ✅")
+# Nhận lịch tập gym hôm nay
+async def get_today_gym(user_id):
+    days_map = {
+        "monday": "thứ 2",
+        "tuesday": "thứ 3",
+        "wednesday": "thứ 4",
+        "thursday": "thứ 5",
+        "friday": "thứ 6",
+        "saturday": "thứ 7",
+        "sunday": "chủ nhật"
+    }
 
-    except Exception as e:
-        await message.answer("Lỗi: " + str(e))
+    today = datetime.datetime.today().strftime("%A").lower()
+    today_vietnamese = days_map.get(today, "không xác định")
 
-@dp.message(commands=['history'])
-async def show_history(message: Message):
+    ref = db.reference(f"users/{user_id}/gym_schedule")
+    schedule = ref.get()
+
+    if schedule and today_vietnamese in schedule:
+        return f"📅 Hôm nay là {today_vietnamese}\n🏋️ Bài tập: {schedule[today_vietnamese]}"
+    else:
+        return f"📅 Hôm nay là {today_vietnamese}, bạn chưa lưu lịch tập!"
+
+# Nhận tin nhắn và lưu lịch tập
+@dp.message()
+async def handle_message(message: Message):
     user_id = str(message.from_user.id)
-    ref = db.reference(f"users/{user_id}/transactions")
-    transactions = ref.get()
+    text = message.text.strip().lower()
 
-    if not transactions:
-        await message.answer("Bạn chưa có dữ liệu thu chi nào.")
-        return
+    if text.startswith("thứ"):
+        await save_gym_schedule(user_id, text)
+        await message.answer("✅ Đã lưu lịch tập gym thành công!")
 
-    msg = "📊 <b>Lịch sử thu chi:</b>\n"
-    for key, data in transactions.items():
-        msg += f"🔹 {data['category']}: {data['amount']} VND\n"
-
-    await message.answer(msg)
+    elif text == "/today_gym":
+        gym_text = await get_today_gym(user_id)
+        await message.answer(gym_text)
 
 async def main():
     await dp.start_polling(bot)
