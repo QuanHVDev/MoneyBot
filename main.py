@@ -12,7 +12,7 @@ import datetime
 firebase_key = json.loads(os.getenv("FIREBASE_KEY"))
 cred = credentials.Certificate(firebase_key)
 firebase_admin.initialize_app(cred, {
-    'databaseURL': 'https://your-database.firebaseio.com/'  # Thay bằng URL Firebase của Quan
+    'databaseURL': 'https://moneybot-fa25a-default-rtdb.asia-southeast1.firebasedatabase.app/'  # Thay bằng URL Firebase của Quan
 })
 
 # Telegram Bot
