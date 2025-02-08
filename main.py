@@ -3,12 +3,12 @@ import firebase_admin
 from firebase_admin import credentials, db
 from aiogram import Bot, Dispatcher, types
 from aiogram.types import Message
-from aiogram.enums import ParseMode
+from aiogram.client.default import DefaultBotProperties
 import asyncio
 import os
 import datetime
 
-# Load Firebase credentials
+# Load Firebase credentials từ biến môi trường
 firebase_key = json.loads(os.getenv("FIREBASE_KEY"))
 cred = credentials.Certificate(firebase_key)
 firebase_admin.initialize_app(cred, {
@@ -17,7 +17,7 @@ firebase_admin.initialize_app(cred, {
 
 # Telegram Bot
 BOT_TOKEN = os.getenv("BOT_TOKEN")
-bot = Bot(token=BOT_TOKEN, parse_mode=ParseMode.HTML)
+bot = Bot(token=BOT_TOKEN, default=DefaultBotProperties(parse_mode=types.ParseMode.HTML))
 dp = Dispatcher()
 
 # Lưu lịch tập gym vào Firebase
