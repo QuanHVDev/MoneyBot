@@ -1,3 +1,4 @@
 aiogram==3.17.0
 firebase-admin
-python-dotenv
+python-dotenv=6.6.0
+google-auth=2.38.0
